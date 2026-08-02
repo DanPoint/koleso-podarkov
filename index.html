@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Колесо подарков</title>
+<style>
+  /* ============================================================
+     ПАЛИТРА И ВИД — менять здесь.
+     Стиль магазина: серый бетон, белое дерево, чёрные рамки, неон.
+     ============================================================ */
+  :root{
+    --bg:#F1F0EC;            /* светлый бетон */
+    --bg-deep:#E7E5DF;       /* тень бетона */
+    --card:#FFFFFF;          /* белое дерево / витрина */
+    --ink:#151513;           /* чёрный металл рамок */
+    --ink-soft:#6E6B64;
+    --line:#151513;          /* цвет рамок */
+    --line-soft:#DDDAD2;
+    --neon:#FFF3D8;          /* тёплый неон-шнур, как в магазине */
+    --neon-glow:rgba(255,222,150,.85);
+    --violet:#8F7FF0;        /* фиолетовая подсветка витрины */
+    --violet-glow:rgba(143,127,240,.45);
+    --radius:12px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    background:
+      radial-gradient(120% 60% at 50% -10%, var(--violet-glow), transparent 60%),
+      linear-gradient(var(--bg), var(--bg-deep));
+    background-attachment:fixed;
+    color:var(--ink);
+    font-size:17px;line-height:1.55;
+    min-height:100vh;
+  }
+  .wrap{max-width:430px;margin:0 auto;padding:28px 18px 60px}
+
+  /* --- шапка --- */
+  header{text-align:center;margin-bottom:22px}
+  .brand{
+    font-size:13px;font-weight:700;letter-spacing:.28em;
+    text-transform:uppercase;color:var(--ink-soft);
+    margin-bottom:10px;
+  }
+  h1{
+    font-size:30px;font-weight:800;letter-spacing:.04em;
+    text-transform:uppercase;line-height:1.15;
+  }
+  .neon-line{
+    height:3px;width:120px;margin:16px auto 0;border-radius:3px;
+    background:var(--neon);
+    box-shadow:0 0 10px 2px var(--neon-glow), 0 0 34px 8px var(--violet-glow);
+  }
+
+  /* --- карточки в чёрной рамке (как рейлы магазина) --- */
+  .frame{
+    background:var(--card);
+    border:2px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:6px 6px 0 rgba(21,21,19,.08);
+    padding:22px 20px;
+  }
+
+  .screen{display:none}
+  .screen.on{display:block;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .lead{text-align:center;color:var(--ink-soft);font-size:16px;margin-bottom:18px}
+  .lead b{color:var(--ink)}
+
+  /* --- колесо --- */
+  .wheel-box{position:relative;width:100%;max-width:340px;margin:0 auto 20px}
+  .pointer{
+    position:absolute;top:-6px;left:50%;transform:translateX(-50%);
+    width:0;height:0;z-index:3;
+    border-left:14px solid transparent;border-right:14px solid transparent;
+    border-top:22px solid var(--ink);
+    filter:drop-shadow(0 2px 2px rgba(0,0,0,.25));
+  }
+  .rotor{
+    position:relative;width:100%;padding-bottom:100%; /* квадрат без aspect-ratio — работает и на старых iOS */
+    transition:transform 5.4s cubic-bezier(.12,.72,.16,1);
+    will-change:transform;
+  }
+  .rotor svg{position:absolute;top:0;left:0;width:100%;height:100%;display:block}
+  .nojs{
+    text-align:center;color:var(--ink-soft);font-size:15.5px;
+    padding:28px 10px;line-height:1.5;
+  }
+
+  /* --- кнопки --- */
+  .btn{
+    display:block;width:100%;
+    background:var(--ink);color:#fff;
+    border:none;border-radius:10px;cursor:pointer;
+    font-size:17px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    padding:17px 10px;
+    transition:box-shadow .25s,transform .12s;
+  }
+  .btn:active{transform:scale(.98)}
+  .btn:not(:disabled):hover{box-shadow:0 0 18px 2px var(--violet-glow),0 0 6px 1px var(--neon-glow)}
+  .btn:disabled{opacity:.45;cursor:default}
+
+  /* --- результат / форма --- */
+  .prize-name{
+    text-align:center;font-size:26px;font-weight:800;
+    text-transform:uppercase;letter-spacing:.03em;
+    margin:6px 0 4px;
+  }
+  .prize-sub{text-align:center;color:var(--ink-soft);font-size:15.5px;margin-bottom:18px}
+
+  .field{margin-bottom:14px}
+  input[type=tel]{
+    width:100%;font-size:20px;font-weight:600;letter-spacing:.02em;
+    padding:15px 16px;
+    border:2px solid var(--line);border-radius:10px;
+    background:#fff;color:var(--ink);outline:none;
+  }
+  input[type=tel]:focus{box-shadow:0 0 0 3px var(--violet-glow)}
+  .check{
+    display:flex;gap:11px;align-items:flex-start;
+    font-size:14px;color:var(--ink-soft);line-height:1.45;
+    margin-bottom:11px;cursor:pointer;
+  }
+  .check input{
+    flex:none;width:20px;height:20px;margin-top:1px;
+    accent-color:var(--ink);cursor:pointer;
+  }
+  .check a{color:var(--ink);text-decoration:underline}
+  .err{
+    display:none;text-align:center;color:#B3261E;
+    font-size:14.5px;margin-bottom:12px;
+  }
+
+  /* --- купон --- */
+  .coupon{
+    border:2px dashed var(--line);border-radius:var(--radius);
+    padding:22px 16px;text-align:center;
+    background:#fff;
+    box-shadow:0 0 22px 3px var(--neon-glow) inset;
+  }
+  .coupon .cap{
+    font-size:12px;font-weight:700;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px;
+  }
+  .coupon .code{
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:34px;font-weight:800;letter-spacing:.14em;
+    margin:4px 0 10px;
+  }
+  .coupon .until{font-size:15px;color:var(--ink-soft)}
+  .coupon .until b{color:var(--ink)}
+  .hint{
+    text-align:center;font-size:14.5px;color:var(--ink-soft);
+    margin-top:16px;line-height:1.5;
+  }
+  .testmode{
+    display:none;text-align:center;font-size:12.5px;color:#B3261E;
+    margin-top:12px;letter-spacing:.04em;
+  }
+
+  footer{
+    text-align:center;margin-top:26px;
+    font-size:13px;color:var(--ink-soft);
+  }
+  footer a{color:var(--ink-soft)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">Магазин одежды</div><!-- сюда лого, когда появится -->
+    <h1>Колесо подарков</h1>
+    <div class="neon-line"></div>
+  </header>
+
+  <!-- ЭКРАН 1: колесо -->
+  <div class="screen on" id="s-wheel">
+    <p class="lead">Покупка от <b id="min-sum-1"></b> — крутите колесо.<br>Подарок действует <b id="days-1"></b> дней.</p>
+    <div class="frame">
+      <noscript>
+        <div class="nojs">Это предпросмотр — колесо здесь не крутится.<br>
+        <b>Откройте файл в браузере</b> (Safari или Chrome),<br>и всё заработает.</div>
+      </noscript>
+      <div class="wheel-box">
+        <div class="pointer"></div>
+        <div class="rotor" id="rotor"></div>
+      </div>
+      <button class="btn" id="spin-btn">Крутить колесо</button>
+    </div>
+  </div>
+
+  <!-- ЭКРАН 2: приз + телефон -->
+  <div class="screen" id="s-form">
+    <div class="frame">
+      <p class="lead" style="margin-bottom:4px">Ваш подарок</p>
+      <div class="prize-name" id="prize-name"></div>
+      <p class="prize-sub">Оставьте номер — купон появится на экране и будет ждать вас на кассе.</p>
+      <div class="field">
+        <input type="tel" id="phone" inputmode="tel" placeholder="+7 (___) ___-__-__" autocomplete="tel">
+      </div>
+      <label class="check">
+        <input type="checkbox" id="agree-pd">
+        <span>Соглашаюсь на <a href="policy.html" target="_blank">обработку персональных данных</a> для участия в акции</span>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="agree-ads">
+        <span>Хочу получать СМС об акциях и новинках магазина</span>
+      </label>
+      <div class="err" id="form-err"></div>
+      <button class="btn" id="get-btn">Забрать подарок</button>
+    </div>
+  </div>
+
+  <!-- ЭКРАН 3: купон -->
+  <div class="screen" id="s-coupon">
+    <div class="frame">
+      <div class="coupon">
+        <div class="cap">Ваш купон</div>
+        <div class="prize-name" id="c-prize" style="font-size:21px"></div>
+        <div class="code" id="c-code"></div>
+        <div class="until">действует до <b id="c-until"></b><br>при покупке от <b id="min-sum-2"></b></div>
+      </div>
+      <p class="hint">Покажите этот экран на кассе.<br>Купон сохранён — страница откроется с ним снова.</p>
+      <div class="testmode" id="testmode">тестовый режим · заявка никуда не отправлена</div>
+    </div>
+  </div>
+
+  <footer>
+    <a href="policy.html" target="_blank">Политика обработки персональных данных</a>
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   НАСТРОЙКИ — менять здесь. Дизайн — в :root наверху.
+   ============================================================ */
+const CONFIG = {
+  endpoint: "",            // URL send.php на хостинге, например "https://site.ru/send.php". Пусто = тестовый режим.
+  minSum: 3500,            // минимальная сумма покупки, ₽
+  couponDays: 14,          // срок действия купона, дней
+  repeatLockHours: 6,      // не давать крутить повторно на этом телефоне, часов
+  couponPrefix: "КП",      // префикс кода купона
+  /* label — короткая подпись на колесе; full — полное название приза;
+     weight — шанс в % (сумма = 100); color — цвет сектора.
+     Сетка утверждена клиентом 01.08.2026. */
+  prizes: [
+    {label:"−5%",      full:"Скидка 5%",        weight:40,  color:"#F5D9DE"},
+    {label:"−10%",     full:"Скидка 10%",       weight:30,  color:"#CFE0F1"},
+    {label:"−15%",     full:"Скидка 15%",       weight:15,  color:"#F3E9C9"},
+    {label:"Подарок",  full:"Подарок к покупке",weight:10,  color:"#D9E2D4"},
+    {label:"−30%",     full:"Скидка 30%",       weight:1.5, color:"#E4DCF0"},
+    {label:"−750₽",    full:"Скидка 750 ₽",     weight:1.5, color:"#F3D9C6"},
+    {label:"−90%",     full:"Скидка 90%",       weight:1,   color:"#151513", text:"#FFF3D8"},
+    {label:"−1000₽",   full:"Скидка 1000 ₽",    weight:1,   color:"#3F3A55", text:"#E4DCF0"},
+  ],
+};
+
+/* ============================================================ */
+const $ = id => document.getElementById(id);
+const LS_KEY = "kp_state";
+/* localStorage может быть запрещён настройками приватности (Safari) —
+   тогда работаем без сохранения, но не падаем */
+let state = {};
+try { state = JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch(e){}
+const save = () => { try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){} };
+const fmtSum = n => n.toLocaleString("ru-RU") + " ₽";
+const fmtDate = d => String(d.getDate()).padStart(2,"0") + "." + String(d.getMonth()+1).padStart(2,"0") + "." + d.getFullYear();
+
+let currentPrize = null;
+
+/* --- сборка колеса (равные сектора, шансы — в weight) --- */
+function buildWheel(){
+  const N = CONFIG.prizes.length, seg = 360 / N, R = 100, cx = 105, cy = 105;
+  const rad = a => a * Math.PI / 180;
+  let parts = "";
+  CONFIG.prizes.forEach((p, i) => {
+    const a1 = -90 + i * seg, a2 = a1 + seg;
+    const x1 = cx + R * Math.cos(rad(a1)), y1 = cy + R * Math.sin(rad(a1));
+    const x2 = cx + R * Math.cos(rad(a2)), y2 = cy + R * Math.sin(rad(a2));
+    parts += `<path d="M${cx} ${cy} L${x1.toFixed(2)} ${y1.toFixed(2)} A${R} ${R} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z"
+      fill="${p.color}" stroke="#151513" stroke-width="1.6"/>`;
+    parts += `<text transform="rotate(${(i + 0.5) * seg}, ${cx}, ${cy})" x="${cx}" y="${cy - R * 0.62}"
+      text-anchor="middle" font-size="13" font-weight="800" letter-spacing=".5"
+      fill="${p.text || "#151513"}">${p.label}</text>`;
+  });
+  $("rotor").innerHTML = `<svg viewBox="0 0 210 210" xmlns="http://www.w3.org/2000/svg">
+    ${parts}
+    <circle cx="${cx}" cy="${cy}" r="101.5" fill="none" stroke="#151513" stroke-width="5"/>
+    <circle cx="${cx}" cy="${cy}" r="17" fill="#151513"/>
+    <circle cx="${cx}" cy="${cy}" r="6" fill="#FFF3D8"/>
+  </svg>`;
+}
+
+/* --- взвешенный выбор приза --- */
+function pickPrize(){
+  const total = CONFIG.prizes.reduce((s,p) => s + p.weight, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < CONFIG.prizes.length; i++){
+    if ((r -= CONFIG.prizes[i].weight) < 0) return i;
+  }
+  return CONFIG.prizes.length - 1;
+}
+
+/* --- вращение --- */
+function spin(){
+  $("spin-btn").disabled = true;
+  const i = pickPrize();
+  currentPrize = CONFIG.prizes[i];
+  const seg = 360 / CONFIG.prizes.length;
+  const jitter = (Math.random() - 0.5) * seg * 0.6;
+  const target = 360 * 6 - ((i + 0.5) * seg + jitter);
+  $("rotor").style.transform = `rotate(${target}deg)`;
+  setTimeout(() => {
+    state.lastSpin = Date.now(); save();
+    $("prize-name").textContent = currentPrize.full;
+    show("s-form");
+  }, 5600);
+}
+
+/* --- телефон: маска и проверка --- */
+function maskPhone(el){
+  let d = el.value.replace(/\D/g, "");
+  if (d.startsWith("8")) d = "7" + d.slice(1);
+  if (!d.startsWith("7")) d = "7" + d;
+  d = d.slice(0, 11);
+  let out = "+7";
+  if (d.length > 1) out += " (" + d.slice(1, 4);
+  if (d.length >= 5) out += ") " + d.slice(4, 7);
+  if (d.length >= 8) out += "-" + d.slice(7, 9);
+  if (d.length >= 10) out += "-" + d.slice(9, 11);
+  el.value = out;
+  return d.length === 11;
+}
+
+/* --- купон --- */
+function makeCode(){
+  const abc = "ABCEHKMPTX0123456789"; // без похожих символов
+  let s = "";
+  for (let i = 0; i < 4; i++) s += abc[Math.floor(Math.random() * abc.length)];
+  return CONFIG.couponPrefix + "-" + s;
+}
+
+function showCoupon(c){
+  $("c-prize").textContent = c.prize;
+  $("c-code").textContent = c.code;
+  $("c-until").textContent = c.until;
+  $("min-sum-2").textContent = fmtSum(CONFIG.minSum);
+  if (!CONFIG.endpoint) $("testmode").style.display = "block";
+  show("s-coupon");
+}
+
+function submit(){
+  const err = $("form-err");
+  err.style.display = "none";
+  if (!maskPhone($("phone"))){ err.textContent = "Введите номер полностью"; err.style.display = "block"; return; }
+  if (!$("agree-pd").checked){ err.textContent = "Нужно согласие на обработку данных"; err.style.display = "block"; return; }
+
+  const until = new Date(Date.now() + CONFIG.couponDays * 864e5);
+  const c = {
+    phone: $("phone").value,
+    prize: currentPrize.full,
+    code: makeCode(),
+    until: fmtDate(until),
+    untilTs: until.getTime(),
+    ads: $("agree-ads").checked,
+  };
+  state.coupon = c; save();
+  showCoupon(c);
+
+  if (CONFIG.endpoint){
+    fetch(CONFIG.endpoint, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({phone: c.phone, prize: c.prize, code: c.code, until: c.until, ads: c.ads}),
+    }).catch(e => console.warn("send failed", e));
+  } else {
+    console.log("ТЕСТОВЫЙ РЕЖИМ, заявка:", c);
+  }
+}
+
+/* --- экраны --- */
+function show(id){
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("on"));
+  $(id).classList.add("on");
+}
+
+/* --- старт --- */
+buildWheel();
+$("min-sum-1").textContent = fmtSum(CONFIG.minSum);
+$("days-1").textContent = CONFIG.couponDays;
+$("spin-btn").addEventListener("click", spin);
+$("get-btn").addEventListener("click", submit);
+$("phone").addEventListener("input", () => maskPhone($("phone")));
+
+/* возвращение: активный купон показываем сразу */
+if (state.coupon && state.coupon.untilTs > Date.now()){
+  showCoupon(state.coupon);
+} else if (state.lastSpin && Date.now() - state.lastSpin < CONFIG.repeatLockHours * 36e5){
+  /* недавно крутил, но купон не оформил/истёк — даём крутить снова только после паузы */
+  $("spin-btn").disabled = true;
+  $("spin-btn").textContent = "Уже крутили — до новой покупки";
+}
+</script>
+</body>
+</html>
