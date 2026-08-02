@@ -166,6 +166,20 @@
     font-size:13px;color:var(--ink-soft);
   }
   footer a{color:var(--ink-soft)}
+
+  /* --- праздник при выигрыше --- */
+  #confetti{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:50}
+  @keyframes winpulse{
+    0%,100%{box-shadow:6px 6px 0 rgba(21,21,19,.07)}
+    50%{box-shadow:0 0 30px 5px var(--neon-glow), 0 0 70px 18px var(--violet-glow)}
+  }
+  .win-glow{animation:winpulse 1.1s ease-in-out 3}
+  @keyframes pop{
+    0%{transform:scale(.3);opacity:0}
+    70%{transform:scale(1.12)}
+    100%{transform:scale(1);opacity:1}
+  }
+  .pop{animation:pop .55s cubic-bezier(.2,1.4,.4,1) both}
 </style>
 </head>
 <body>
@@ -233,6 +247,7 @@
     <a href="policy.html" target="_blank">Политика обработки персональных данных</a>
   </footer>
 </div>
+<canvas id="confetti"></canvas>
 
 <script>
 /* ============================================================
@@ -251,7 +266,7 @@ const CONFIG = {
     {label:"−5%",      full:"Скидка 5%",        weight:40,  color:"#F5D9DE"},
     {label:"−10%",     full:"Скидка 10%",       weight:30,  color:"#CFE0F1"},
     {label:"−15%",     full:"Скидка 15%",       weight:15,  color:"#F3E9C9"},
-    {label:"Подарок",  full:"Подарок к покупке",weight:10,  color:"#D9E2D4"},
+    {icon:"gift",      full:"Подарок к покупке",weight:10,  color:"#D9E2D4"},
     {label:"−30%",     full:"Скидка 30%",       weight:1.5, color:"#E4DCF0"},
     {label:"−750₽",    full:"Скидка 750 ₽",     weight:1.5, color:"#F3D9C6"},
     {label:"−90%",     full:"Скидка 90%",       weight:1,   color:"#151513", text:"#FFF3D8"},
@@ -272,6 +287,13 @@ const fmtDate = d => String(d.getDate()).padStart(2,"0") + "." + String(d.getMon
 
 let currentPrize = null;
 
+/* --- иконка подарка для сектора (вектор, рисуется в квадрате 18×18) --- */
+const GIFT_ICON = `
+  <path d="M9 4.6 C 6.2 4.6 4.9 1.9 6.6 1.1 C 7.9 0.5 8.8 2.4 9 4.2 C 9.2 2.4 10.1 0.5 11.4 1.1 C 13.1 1.9 11.8 4.6 9 4.6 Z" fill="#151513"/>
+  <rect x="1.4" y="4.6" width="15.2" height="3.4" rx="0.9" fill="#151513"/>
+  <rect x="2.6" y="9" width="12.8" height="8.2" rx="0.9" fill="#151513"/>
+  <rect x="8" y="4.6" width="2" height="12.6" fill="#FFF3D8"/>`;
+
 /* --- сборка колеса (равные сектора, шансы — в weight) --- */
 function buildWheel(){
   const N = CONFIG.prizes.length, seg = 360 / N, R = 100, cx = 105, cy = 105;
@@ -283,9 +305,13 @@ function buildWheel(){
     const x2 = cx + R * Math.cos(rad(a2)), y2 = cy + R * Math.sin(rad(a2));
     parts += `<path d="M${cx} ${cy} L${x1.toFixed(2)} ${y1.toFixed(2)} A${R} ${R} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z"
       fill="${p.color}" stroke="#151513" stroke-width="1.6"/>`;
-    parts += `<text transform="rotate(${(i + 0.5) * seg}, ${cx}, ${cy})" x="${cx}" y="${cy - R * 0.62}"
-      text-anchor="middle" font-size="13" font-weight="800" letter-spacing=".5"
-      fill="${p.text || "#151513"}">${p.label}</text>`;
+    if (p.icon === "gift"){
+      parts += `<g transform="rotate(${(i + 0.5) * seg}, ${cx}, ${cy}) translate(${cx - 9}, ${cy - R * 0.62 - 12})">${GIFT_ICON}</g>`;
+    } else {
+      parts += `<text transform="rotate(${(i + 0.5) * seg}, ${cx}, ${cy})" x="${cx}" y="${cy - R * 0.62}"
+        text-anchor="middle" font-size="13" font-weight="800" letter-spacing=".5"
+        fill="${p.text || "#151513"}">${p.label}</text>`;
+    }
   });
   $("rotor").innerHTML = `<svg viewBox="0 0 210 210" xmlns="http://www.w3.org/2000/svg">
     ${parts}
@@ -305,9 +331,95 @@ function pickPrize(){
   return CONFIG.prizes.length - 1;
 }
 
+/* ============================================================
+   Праздник: конфетти + свечение + вибрация + звук.
+   Редкий приз (weight <= 1.5) празднуем жирнее.
+   ============================================================ */
+let audioCtx = null;
+function initAudio(){ /* создаём по клику — иначе iOS не даст звук */
+  try{
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+  }catch(e){}
+}
+function winSound(rare){
+  if (!audioCtx) return;
+  try{
+    const notes = rare ? [523.25, 659.25, 783.99, 1046.5, 1318.5] : [523.25, 659.25, 783.99];
+    notes.forEach((f, i) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = "triangle"; o.frequency.value = f;
+      const t = audioCtx.currentTime + i * 0.09;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t); o.stop(t + 0.6);
+    });
+  }catch(e){}
+}
+
+const CONF_COLORS = ["#F5D9DE","#CFE0F1","#F3E9C9","#D9E2D4","#E4DCF0","#F3D9C6","#FFF3D8","#8F7FF0"];
+const confetti = { canvas: $("confetti"), parts: [], running: false };
+function fitCanvas(){
+  const c = confetti.canvas;
+  /* присвоение width/height стирает холст — трогаем только при реальном изменении */
+  if (c.width !== innerWidth || c.height !== innerHeight){
+    c.width = innerWidth; c.height = innerHeight;
+  }
+}
+addEventListener("resize", fitCanvas);
+function burst(px, py, count, power){
+  fitCanvas();
+  for (let i = 0; i < count; i++){
+    const a = Math.random() * Math.PI * 2, v = (0.4 + Math.random()) * power;
+    confetti.parts.push({
+      x: px * innerWidth, y: py * innerHeight,
+      vx: Math.cos(a) * v, vy: Math.sin(a) * v - power * 0.9,
+      w: 5 + Math.random() * 6, h: 3 + Math.random() * 5,
+      rot: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.3,
+      color: CONF_COLORS[(Math.random() * CONF_COLORS.length) | 0],
+      life: 90 + Math.random() * 50,
+    });
+  }
+  if (!confetti.running){ confetti.running = true; requestAnimationFrame(confTick); }
+}
+function confTick(){
+  const c = confetti.canvas, ctx = c.getContext("2d");
+  ctx.clearRect(0, 0, c.width, c.height);
+  confetti.parts = confetti.parts.filter(p => p.life > 0 && p.y < c.height + 30);
+  confetti.parts.forEach(p => {
+    p.x += p.vx; p.y += p.vy; p.vy += 0.16; p.vx *= 0.99;
+    p.rot += p.vr; p.life--;
+    ctx.save();
+    ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+    ctx.globalAlpha = Math.min(1, p.life / 40);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    ctx.restore();
+  });
+  if (confetti.parts.length){ requestAnimationFrame(confTick); }
+  else { confetti.running = false; ctx.clearRect(0, 0, c.width, c.height); }
+}
+
+function celebrate(rare){
+  burst(0.5, 0.32, rare ? 90 : 55, 7);                    // залп от колеса
+  setTimeout(() => burst(0.12, 0.85, rare ? 45 : 25, 9), 180);  // пушки из углов
+  setTimeout(() => burst(0.88, 0.85, rare ? 45 : 25, 9), 300);
+  if (rare) setTimeout(() => burst(0.5, 0.25, 70, 8), 650);
+  if (navigator.vibrate) navigator.vibrate(rare ? [70, 40, 70, 40, 160] : [45, 30, 90]);
+  winSound(rare);
+  const fr = $("s-form").querySelector(".frame");
+  const pn = $("prize-name");
+  fr.classList.remove("win-glow"); pn.classList.remove("pop");
+  void fr.offsetWidth; /* перезапуск анимаций */
+  fr.classList.add("win-glow"); pn.classList.add("pop");
+}
+
 /* --- вращение --- */
 function spin(){
   $("spin-btn").disabled = true;
+  initAudio();
   const i = pickPrize();
   currentPrize = CONFIG.prizes[i];
   const seg = 360 / CONFIG.prizes.length;
@@ -318,6 +430,7 @@ function spin(){
     state.lastSpin = Date.now(); save();
     $("prize-name").textContent = currentPrize.full;
     show("s-form");
+    celebrate(currentPrize.weight <= 1.5);
   }, 5600);
 }
 
@@ -370,6 +483,8 @@ function submit(){
   };
   state.coupon = c; save();
   showCoupon(c);
+  burst(0.5, 0.4, 40, 6);
+  if (navigator.vibrate) navigator.vibrate(60);
 
   if (CONFIG.endpoint){
     fetch(CONFIG.endpoint, {
