@@ -261,16 +261,22 @@ const CONFIG = {
   couponPrefix: "КП",      // префикс кода купона
   /* label — короткая подпись на колесе; full — полное название приза;
      weight — шанс в % (сумма = 100); color — цвет сектора.
-     Сетка утверждена клиентом 01.08.2026. */
+     Сетка утверждена клиентом 03.08.2026.
+     Цвета: проценты — холодные пастели, рубли — тёплые, главный приз — чёрный.
+     Порядок секторов подобран так, чтобы два самых частых приза (по 35%)
+     стояли друг напротив друга, а редкие были разнесены по кругу. */
   prizes: [
-    {label:"−5%",      full:"Скидка 5%",        weight:40,  color:"#F5D9DE"},
-    {label:"−10%",     full:"Скидка 10%",       weight:30,  color:"#CFE0F1"},
-    {label:"−15%",     full:"Скидка 15%",       weight:15,  color:"#F3E9C9"},
-    {icon:"gift",      full:"Подарок к покупке",weight:10,  color:"#D9E2D4"},
-    {label:"−30%",     full:"Скидка 30%",       weight:1.5, color:"#E4DCF0"},
-    {label:"−750₽",    full:"Скидка 750 ₽",     weight:1.5, color:"#F3D9C6"},
-    {label:"−90%",     full:"Скидка 90%",       weight:1,   color:"#151513", text:"#FFF3D8"},
-    {label:"−1000₽",   full:"Скидка 1000 ₽",    weight:1,   color:"#3F3A55", text:"#E4DCF0"},
+    {label:"−5%",     full:"Скидка 5%",     weight:35,  color:"#F5D9DE"},
+    {label:"−500₽",   full:"Скидка 500 ₽",  weight:3,   color:"#F7E0C8"},
+    {label:"−15%",    full:"Скидка 15%",    weight:5,   color:"#CFE0F1"},
+    {label:"−750₽",   full:"Скидка 750 ₽",  weight:1.5, color:"#F3D2B4"},
+    {label:"−25%",    full:"Скидка 25%",    weight:3,   color:"#DCD6EE"},
+    {label:"−250₽",   full:"Скидка 250 ₽",  weight:35,  color:"#FAEBD5"},
+    {label:"−30%",    full:"Скидка 30%",    weight:1.5, color:"#C9BFE6"},
+    {label:"−1000₽",  full:"Скидка 1000 ₽", weight:1,   color:"#4A3C2E", text:"#FFF3D8"},
+    {label:"−10%",    full:"Скидка 10%",    weight:10,  color:"#DCE9F5"},
+    {label:"−90%",    full:"Скидка 90%",    weight:1,   color:"#151513", text:"#FFF3D8"},
+    {label:"−20%",    full:"Скидка 20%",    weight:4,   color:"#E3EAE0"},
   ],
 };
 
@@ -308,8 +314,11 @@ function buildWheel(){
     if (p.icon === "gift"){
       parts += `<g transform="rotate(${(i + 0.5) * seg}, ${cx}, ${cy}) translate(${cx - 9}, ${cy - R * 0.62 - 12})">${GIFT_ICON}</g>`;
     } else {
-      parts += `<text transform="rotate(${(i + 0.5) * seg}, ${cx}, ${cy})" x="${cx}" y="${cy - R * 0.62}"
-        text-anchor="middle" font-size="13" font-weight="800" letter-spacing=".5"
+      /* подпись вдоль радиуса: длина ограничена радиусом, а не шириной сектора —
+         иначе «−1000₽» не влезает поперёк узкого сектора */
+      const a = -90 + (i + 0.5) * seg;
+      parts += `<text transform="rotate(${a.toFixed(2)}, ${cx}, ${cy})" x="${cx + R * 0.58}" y="${cy + 4.2}"
+        text-anchor="middle" font-size="12" font-weight="800" letter-spacing=".3"
         fill="${p.text || "#151513"}">${p.label}</text>`;
     }
   });
