@@ -47,8 +47,8 @@
     margin-bottom:12px;
   }
   .logo{
-    display:block;width:100%;max-width:210px;margin:0 auto 14px;
-    mix-blend-mode:multiply; /* убирает стык подложки, пока лого без прозрачности */
+    display:block;width:100%;max-width:230px;margin:0 auto 14px;
+    filter:drop-shadow(0 6px 14px rgba(46,38,34,.13));
   }
   h1{
     font-size:27px;font-weight:800;letter-spacing:.08em;
@@ -211,8 +211,8 @@
 <div class="wrap">
 
   <header>
-    <!-- логотип: заменить на logo.png с прозрачным фоном, когда будет готов,
-         и убрать mix-blend-mode в стилях .logo -->
+    <!-- logo.png — прозрачный PNG, работает на любом фоне.
+         Квадратная версия для иконок/печати лежит рядом: logo-square.png -->
     <img class="logo" src="logo.png" alt="ПИНК"
          onerror="this.style.display='none';document.getElementById('brand-txt').style.display='block'">
     <div class="brand" id="brand-txt" style="display:none">ПИНК</div>
